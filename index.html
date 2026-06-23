@@ -562,20 +562,30 @@
     result.style.display = 'none';
 
     const data = new FormData(this);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-      const res = await fetch('https://api.web3forms.com/submit', { method: 'POST', body: data });
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        body: data,
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
       const json = await res.json();
       if (json.success) {
         this.reset();
         document.getElementById('thank-you-modal').style.display = 'flex';
       } else {
         result.style.color = '#990000';
-        result.textContent = 'Something went wrong. Please email us directly at info@skating-stars.com.';
+        result.textContent = 'Error: ' + (json.message || 'Submission failed. Please email info@skating-stars.com directly.');
         result.style.display = 'block';
       }
     } catch (err) {
+      clearTimeout(timeout);
       result.style.color = '#990000';
-      result.textContent = 'Something went wrong. Please email us directly at info@skating-stars.com.';
+      result.textContent = err.name === 'AbortError'
+        ? 'Request timed out. Please email info@skating-stars.com directly.'
+        : 'Something went wrong. Please email info@skating-stars.com directly.';
       result.style.display = 'block';
     }
     btn.disabled = false;
